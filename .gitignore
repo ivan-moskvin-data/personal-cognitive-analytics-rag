@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Environments
+venv/
+.venv/
+env/
+
+# VS Code & Antigravity
+.vscode/
+.antigravity/
+.amazonq/
+
+# Logs
+logs/*
+!logs/.gitkeep
+*.log
+
+# Data
+*.csv
+*.xlsx
+data/*
+!data/.gitkeep
+
+
+.streamlit/
+_workspace
