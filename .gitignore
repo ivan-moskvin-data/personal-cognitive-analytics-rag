@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+.pytest_cache/
 
 # Jupyter Notebooks
 .ipynb_checkpoints/
@@ -10,6 +12,8 @@ __pycache__/
 venv/
 .venv/
 env/
+.env
+.env.local
 
 # VS Code & Antigravity
 .vscode/
@@ -21,12 +25,42 @@ logs/*
 !logs/.gitkeep
 *.log
 
-# Data
+# Data - User Privacy & Sensitive Data
+data/history/*.json
+!data/history/.gitkeep
+data/inbox/*.md
+!data/inbox/.gitkeep
+data/inbox_archive/*.md
+data/processed/*.parquet
+data/processed/*.csv
+data/processed/*.txt
+data/raw/*
+!data/raw/.gitkeep
+data/memory/gold/*.md
+data/memory/*.md
+!data/memory/gold/.gitkeep
+
+# ChromaDB Vector Database
+data/vector_db/
+!data/vector_db/.gitkeep
+*.chroma/
+chroma_instance/
+
+# SQLite Databases (Cache & Telemetry)
+*.sqlite3
+*.db
+cache.db
+telemetry.db
+
+# CSV & Excel Files
 *.csv
 *.xlsx
-data/*
-!data/.gitkeep
 
-
+# Streamlit
 .streamlit/
+
+# Workspace
 _workspace
+
+# Персональный контекст
+MEMORY.md
