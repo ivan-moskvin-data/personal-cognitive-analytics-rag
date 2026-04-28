@@ -390,6 +390,10 @@ with st.sidebar:
     app_mode = st.radio("Режим:", ["💬 Чат", "📊 Логи", "📈 Телеметрия", "📥 Входящие"])
     
     st.markdown("---")
+    
+    render_sidebar()
+
+    st.markdown("---")
     if st.button("🧹 Очистить историю чата"):
         st.session_state.messages = [st.session_state.messages[0]]
         st.rerun()

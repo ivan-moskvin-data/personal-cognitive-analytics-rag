@@ -28,7 +28,7 @@ class AutoSync:
     # Компилируем регулярные выражения один раз на уровне класса
     FILE_PATTERN = re.compile(r"FILE:\s*(.+)")
     PATCH_PATTERN = re.compile(
-        r"<<<<<<<\s*SEARCH\n(.*?)\n=======\n(.*?)\n>>>>>>>\s*REPLACE", 
+        r"<<<<<<<\s*SEARCH\s*(.*?)\s*=======\s*(.*?)\s*>>>>>>>\s*REPLACE", 
         re.DOTALL
     )
 
