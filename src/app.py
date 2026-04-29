@@ -22,6 +22,7 @@ st.set_page_config(page_title="PCAR | Цифровой Мозг", page_icon="�
 sys.path.append(str(Path(__file__).resolve().parent))
 from orchestrator import PCARBrain
 
+
 def save_metadata() -> None:
     """Сохраняет метаданные чатов в JSON файл."""
     metadata = {
@@ -31,6 +32,7 @@ def save_metadata() -> None:
     }
     with open(METADATA_FILE, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
+
 
 def load_metadata() -> Dict[str, Any]:
     """Загружает метаданные чатов из JSON файла."""
@@ -47,6 +49,7 @@ def load_metadata() -> Dict[str, Any]:
             pass
     return {"chats_meta": {}, "pinned_chat_ids": [], "folders": {}}
 
+
 def save_chat_to_disk(chat_id: Optional[str] = None) -> None:
     """Сохраняет текущую сессию чата в файл."""
     if chat_id is None:
@@ -55,6 +58,7 @@ def save_chat_to_disk(chat_id: Optional[str] = None) -> None:
         chat_file = HISTORY_DIR / f"{chat_id}.json"
         with open(chat_file, "w", encoding="utf-8") as f:
             json.dump(st.session_state.messages, f, ensure_ascii=False, indent=2)
+
 
 def load_chat_from_disk(chat_id: str) -> List[Dict[str, str]]:
     """Загружает историю чата из файла."""
@@ -66,6 +70,7 @@ def load_chat_from_disk(chat_id: str) -> List[Dict[str, str]]:
         except:
             pass
     return []
+
 
 @st.cache_data
 def load_data() -> Optional[pd.DataFrame]:
@@ -120,9 +125,19 @@ def render_chat() -> None:
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-            
+    
     # Обработка нового ввода
     if prompt := st.chat_input("Напиши свой запрос здесь (например: Расскажи про стек ASSE)..."):
+        # Авто-заголовок: если текущий чат имеет дефолтное имя, обновляем его
+        current_id = st.session_state.get("current_chat_id")
+        if current_id:
+            current_title = st.session_state.chats_meta.get(current_id, {}).get("title", "")
+            if current_title == "Новый чат":
+                # Берем первые 30 символов из сообщения пользователя
+                new_title = prompt[:30] + ("..." if len(prompt) > 30 else "")
+                st.session_state.chats_meta[current_id]["title"] = new_title
+                save_metadata()
+        
         st.session_state.messages.append({"role": "user", "content": prompt})
         save_chat_to_disk(st.session_state.current_chat_id)
         with st.chat_message("user"):
@@ -146,6 +161,10 @@ def render_chat() -> None:
                 
         st.session_state.messages.append({"role": "assistant", "content": full_response})
         save_chat_to_disk(st.session_state.current_chat_id)
+        st.rerun()
+
+
+import re
 
 def render_inbox():
     st.title("📥 Входящие знания")
@@ -161,18 +180,42 @@ def render_inbox():
     for patch_file in patches:
         with st.expander(f"📄 Предложение: {patch_file.name}", expanded=True):
             content = patch_file.read_text(encoding="utf-8")
-            st.code(content, language="markdown")
             
+            # Парсим файл, чтобы отобразить его красиво
+            file_match = re.search(r"FILE:\s*(.+)", content)
+            patch_match = re.search(r"<<<<<<<\s*SEARCH\s*(.*?)\s*=======\s*(.*?)\s*>>>>>>>\s*REPLACE", content, re.DOTALL)
+            
+            if file_match and patch_match:
+                filename = file_match.group(1).strip()
+                search_text = patch_match.group(1).strip()
+                replace_text = patch_match.group(2).strip()
+                
+                st.markdown(f"**Целевой файл:** `{filename}`")
+                
+                if not search_text:
+                    st.success("**➕ Добавление новых данных:**")
+                    st.markdown(replace_text)
+                else:
+                    st.warning("**📝 Изменение существующих данных:**")
+                    st.markdown("*Было:*")
+                    st.code(search_text, language="markdown")
+                    st.markdown("*Станет:*")
+                    st.markdown(replace_text)
+            else:
+                # Фолбэк, если регулярка не сработала
+                st.code(content, language="markdown")
+            
+            # Кнопки действий
             c1, c2 = st.columns(2)
-            if c1.button("✅ Принять", key=f"ok_{patch_file.name}"):
-                # Ставим пометку одобрения и запускаем синхронизацию
+            if c1.button("✅ Принять", key=f"ok_{patch_file.name}", use_container_width=True):
                 patch_file.write_text(f"[x]\n{content}", encoding="utf-8")
                 AutoSync().run()
                 st.rerun()
                 
-            if c2.button("🗑️ Удалить", key=f"del_{patch_file.name}"):
+            if c2.button("🗑️ Удалить", key=f"del_{patch_file.name}", use_container_width=True):
                 patch_file.unlink()
                 st.rerun()
+
 
 def render_dashboard() -> None:
     """Изолированная логика аналитического дашборда (EDA)."""
@@ -223,6 +266,7 @@ def render_dashboard() -> None:
         daily_counts = valid_times.dt.date.value_counts().sort_index().rename_axis('date').reset_index(name='count')
         fig_line = px.line(daily_counts, x='date', y='count', labels={'date': 'Дата', 'count': 'Сообщения'})
         st.plotly_chart(fig_line, use_container_width=True)
+
 
 def render_telemetry():
     """Отрисовка дашборда производительности RAG на основе telemetry.db"""
@@ -275,10 +319,11 @@ def render_telemetry():
     except Exception as e:
         st.error(f"Ошибка загрузки телеметрии: {e}")
 
+
 def render_sidebar() -> None:
     """
     Отрисовывает боковое меню (сайдбар) с историей чатов.
-    Использует предварительно сгруппированные словари для O(1) доступа к данным.
+    Реализует функционал переименования, закрепления и авто-заголовка.
     """
     # Edge Case: Защита от падения, если состояние еще не инициализировано
     _init_sidebar_state()
@@ -290,6 +335,44 @@ def render_sidebar() -> None:
             
         st.markdown("---")
         
+        # Получаем текущий чат ID
+        current_id = st.session_state.get("current_chat_id")
+        
+        # Функция для отрисовки кнопки закрепления
+        def render_pin_button(chat_id: str, is_pinned: bool) -> None:
+            """Рендерит кнопку закрепления/открепления чата."""
+            pinned_ids = st.session_state.pinned_chat_ids
+            if is_pinned:
+                if st.button("📌", key=f"unpin_{chat_id}", help="Открепить чат"):
+                    st.session_state.pinned_chat_ids.remove(chat_id)
+                    save_metadata()
+                    st.rerun()
+            else:
+                if st.button("⭐", key=f"pin_{chat_id}", help="Закрепить чат"):
+                    st.session_state.pinned_chat_ids.append(chat_id)
+                    save_metadata()
+                    st.rerun()
+        
+        # Функция для отрисовки кнопки переименования
+        def render_rename_input(chat_id: str, current_title: str) -> None:
+            """Рендерит поле для переименования чата."""
+            # Проверяем, является ли это текущим активным чатом
+            is_current = chat_id == current_id
+            if is_current:
+                # Создаем уникальный ключ для text_input
+                rename_key = f"rename_input_{chat_id}"
+                new_title = st.text_input(
+                    "Название чата:",
+                    value=current_title,
+                    key=rename_key,
+                    label_visibility="collapsed"
+                )
+                # Сохраняем при изменении
+                if new_title and new_title != current_title:
+                    st.session_state.chats_meta[chat_id]["title"] = new_title
+                    save_metadata()
+                    st.rerun()
+        
         # Рендер закрепленных чатов
         st.write("📌 **Закрепленные**")
         pinned_ids: List[str] = st.session_state.pinned_chat_ids
@@ -297,31 +380,53 @@ def render_sidebar() -> None:
         if not pinned_ids:
             st.caption("Нет закрепленных чатов")
         else:
-            for chat_id in pinned_ids:
-                # O(1) получение метаданных по ключу
+            # Отображаем закрепленные чаты в обратном хронологическом порядке
+            for chat_id in reversed(pinned_ids):
                 chat_data = st.session_state.chats_meta.get(chat_id, {})
                 title = chat_data.get("title", "Без названия")
-                is_current = chat_id == st.session_state.get("current_chat_id")
+                is_current = chat_id == current_id
                 emoji = "🔹" if is_current else "💬"
                 
-                if st.button(f"{emoji} {title}", key=f"pin_{chat_id}", use_container_width=True):
-                    _switch_chat(chat_id)
-
-        # Рендер всех чатов (в обратном порядке)
-        st.write("💬 **Чаты**")
+                # Создаем колонки для кнопки чата и кнопки закрепления
+                col1, col2 = st.columns([0.85, 0.15])
+                with col1:
+                    if st.button(f"{emoji} {title}", key=f"pin_{chat_id}", use_container_width=True):
+                        _switch_chat(chat_id)
+                with col2:
+                    render_pin_button(chat_id, is_pinned=True)
+                
+                # Рендерим поле переименования только для активного чата
+                if is_current:
+                    render_rename_input(chat_id, title)
+        
+        st.markdown("---")
+        
+        # Рендер остальных чатов (в обратном порядке)
+        st.write("💬 **Последние**")
         # Получаем все chat_id, исключая закрепленные, и сортируем в обратном порядке
         all_chat_ids = list(st.session_state.chats_meta.keys())
+        # Сначала сортируем по времени создания (последние первыми)
+        # Поскольку мы добавляем новые чаты в конец словаря, reverse даст нам правильный порядок
         for chat_id in reversed(all_chat_ids):
             if chat_id in pinned_ids:
                 continue  # Пропускаем закрепленные чаты
             chat_data = st.session_state.chats_meta.get(chat_id, {})
             title = chat_data.get("title", "Без названия")
-            is_current = chat_id == st.session_state.get("current_chat_id")
+            is_current = chat_id == current_id
             emoji = "🔹" if is_current else "💬"
             
-            if st.button(f"{emoji} {title}", key=f"chat_{chat_id}", use_container_width=True):
-                _switch_chat(chat_id)
-
+            # Создаем колонки для кнопки чата и кнопки закрепления
+            col1, col2 = st.columns([0.85, 0.15])
+            with col1:
+                if st.button(f"{emoji} {title}", key=f"chat_{chat_id}", use_container_width=True):
+                    _switch_chat(chat_id)
+            with col2:
+                render_pin_button(chat_id, is_pinned=False)
+            
+            # Рендерим поле переименования только для активного чата
+            if is_current:
+                render_rename_input(chat_id, title)
+        
         # Рендер папок
         st.write("📁 **Папки**")
         folders: Dict[str, List[str]] = st.session_state.folders
@@ -335,7 +440,7 @@ def render_sidebar() -> None:
                         # O(1) получение метаданных по ключу
                         chat_data = st.session_state.chats_meta.get(chat_id, {})
                         title = chat_data.get("title", "Без названия")
-                        is_current = chat_id == st.session_state.get("current_chat_id")
+                        is_current = chat_id == current_id
                         emoji = "🔹" if is_current else "💬"
                         
                         if st.button(f"{emoji} {title}", key=f"fld_{folder_name}_{chat_id}", use_container_width=True):
@@ -379,6 +484,7 @@ def _switch_chat(chat_id: str) -> None:
         # Загружаем сообщения для нового чата
         st.session_state.messages = load_chat_from_disk(chat_id)
         st.rerun()
+
 
 # ==========================================
 # ТОЧКА ВХОДА СИСТЕМЫ

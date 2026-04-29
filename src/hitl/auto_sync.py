@@ -1,6 +1,7 @@
 import logging
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional, Dict
@@ -8,11 +9,6 @@ from typing import Optional, Dict
 # Настраиваем пути
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(BASE_DIR / "scripts"))
-
-try:
-    from build_gold_index import build_index
-except ImportError:
-    build_index = None
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -120,7 +116,7 @@ class AutoSync:
         if not target_path:
             logging.error(f"Файл {target_filename} не найден в базе знаний.")
             return False
-            
+        
         try:
             file_content = target_path.read_text(encoding="utf-8")
             
@@ -145,16 +141,31 @@ class AutoSync:
     def _trigger_reindex(self) -> None:
         """Автоматически обновляет ChromaDB после изменения файлов."""
         logging.info("🔄 Запускаю переиндексацию векторной базы (ChromaDB)...")
-        if build_index:
-            try:
-                gold_dir = self.memory_dir / "gold"
-                build_index(batch_size=10, gold_dir=gold_dir)
+        
+        # Динамически вычисляем путь до скрипта build_gold_index.py
+        # Поднимаемся на 3 уровня выше от auto_sync.py до корня проекта
+        script_path = BASE_DIR / "scripts" / "build_gold_index.py"
+        
+        if not script_path.exists():
+            logging.warning(f"⚠️ Скрипт переиндексации не найден: {script_path}")
+            return
+        
+        try:
+            # Запускаем скрипт через subprocess с использованием текущего интерпретатора Python
+            result = subprocess.run(
+                [sys.executable, str(script_path)],
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
                 logging.info("🧠 База данных успешно обновлена!")
-            except Exception as e:
-                logging.error(f"Критическая ошибка при индексации: {e}")
-        else:
-            logging.warning("⚠️ Не удалось импортировать индексатор. Обновите базу вручную.")
-
-
-if __name__ == "__main__":
-    AutoSync().run()
+            else:
+                logging.warning(
+                    f"⚠️ Автоматическое обновление базы не удалось.\n"
+                    f"Код возврата: {result.returncode}\n"
+                    f"Ошибка: {result.stderr}"
+                )
+                
+        except Exception as e:
+            logging.error(f"Критическая ошибка при запуске скрипта переиндексации: {e}")

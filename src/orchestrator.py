@@ -101,8 +101,6 @@ class PCARBrain:
         self.current_query = ""
         self.current_query_emb = None
         self.current_context = ""
-        self.current_intent = "unknown"
-        self.is_cache_hit = False
 
     def _do_route(self, event: EventData) -> None:
         raw_query = event.kwargs.get('query')
