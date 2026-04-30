@@ -1,4 +1,4 @@
-"""Окно диалога чата PCAR."""
+"""Окно диалога чата PCAR (Pure Grid)."""
 import asyncio
 import nicegui.ui as ui
 from .state import app_state
@@ -10,36 +10,40 @@ def render_chat() -> None:
     """Отрисовывает интерфейс чата."""
     global input_field, loading_container
 
-    with ui.column().classes('w-full h-full justify-between no-wrap gap-0 relative bg-[#0e0e10] p-0'):
+    # Контейнер чата занимает ВСЕ место. overflow-hidden критичен.
+    with ui.element('div').classes('w-full h-full flex flex-col bg-[#0e0e10] p-0 m-0 overflow-hidden relative'):
         
-        # Приветствие по центру
-        if not app_state.messages or len(app_state.messages) <= 1:
-            with ui.column().classes('absolute-center items-center w-full z-0'):
-                ui.label('Здравствуй!').classes('text-4xl font-medium text-gray-200 mb-2')
-                ui.label('Что нужно сделать?').classes('text-4xl font-medium text-gray-500 mb-8')
-
-        # Область скролла
-        with ui.scroll_area().classes('w-full flex-grow z-10 pb-32'):
-            with ui.column().classes('w-full max-w-3xl mx-auto gap-6 p-4 pt-12'):
+        # 1. ОБЛАСТЬ СКРОЛЛА (занимает flex-1)
+        with ui.element('div').classes('flex-1 w-full overflow-y-auto custom-scrollbar') as scroll_area:
+            with ui.element('div').classes('w-full max-w-3xl mx-auto flex flex-col gap-8 p-4 pt-12 pb-12'):
+                
+                # Приветствие по центру если пусто
+                if not app_state.messages or len(app_state.messages) <= 0:
+                    with ui.column().classes('items-center w-full mt-32'):
+                        ui.label('Здравствуй!').classes('text-4xl font-medium text-gray-200 mb-2')
+                        ui.label('Чем я могу помочь?').classes('text-xl font-medium text-gray-500')
+                
                 render_messages()
-                loading_container = ui.column().classes('w-full gap-4')
-
-        # ПЛАВАЮЩИЙ ВВОД 
-        with ui.page_sticky(position='bottom', x_offset=0, y_offset=24).classes('w-full flex justify-center z-20 pointer-events-none'):
-            with ui.row().classes('w-full max-w-3xl items-center bg-[#1e1f20] rounded-[28px] px-6 py-2 shadow-2xl pointer-events-auto border border-white/5 mx-4'):
+                loading_container = ui.element('div').classes('w-full flex flex-col gap-4')
                 
-                ui.icon('add_circle_outline', size='24px').classes('text-gray-400 cursor-pointer hover:text-gray-200 transition-colors mr-2')
+        # 2. ПАНЕЛЬ ВВОДА (shrink-0 заставляет её стоять на месте)
+        with ui.element('div').classes('w-full shrink-0 p-4 pb-8 bg-[#0e0e10] z-20'):
+            with ui.row().classes('w-full max-w-3xl mx-auto flex items-center bg-[#1e1f20] rounded-[28px] px-6 py-1 shadow-2xl border border-white/5 no-wrap'):
+                
+                ui.icon('add_circle_outline', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mr-2')
 
-                # Исправлен Enter: используем keyup.enter.prevent
-                input_field = ui.input(placeholder='Спросить PCAR...') \
+                input_field = ui.input(placeholder='Введите запрос...') \
                     .props('borderless dark dense autofocus') \
-                    .classes('flex-grow text-lg text-gray-200 py-2') \
-                    .on('keyup.enter.prevent', lambda e: send_message())
+                    .classes('flex-1 text-lg text-gray-200 py-2') \
+                    .on('keydown.enter', send_message)
                 
-                with ui.row().classes('gap-3 items-center ml-2'):
-                    ui.icon('mic_none', size='24px').classes('text-gray-400 cursor-pointer hover:text-gray-200 transition-colors')
-                    ui.button(icon='send', on_click=lambda e: send_message()) \
-                        .props('flat round dense color=white').classes('text-white bg-transparent')
+                ui.icon('mic_none', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mx-2')
+                
+                # Кнопка отправки
+                with ui.element('button').classes(
+                    'w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all border-none outline-none cursor-pointer shrink-0 ml-1 bg-transparent'
+                ).on('click', send_message):
+                    ui.icon('send', size='20px')
 
 
 @ui.refreshable
@@ -59,14 +63,20 @@ def render_messages():
             base_response = parts[0].strip()
             metadata = parts[1].strip()
 
-        with ui.row().classes(f'w-full gap-4 {"justify-end" if is_user else "justify-start"}'):
+        with ui.element('div').classes(f'w-full flex gap-5 no-wrap {"justify-end" if is_user else "justify-start"}'):
             if not is_user:
-                ui.icon('auto_awesome', size='24px').classes('text-indigo-400 mt-2')
+                with ui.element('div').classes('mt-1 shrink-0'):
+                    ui.icon('auto_awesome', size='24px').classes('text-indigo-400')
             
-            with ui.column().classes(f'max-w-[85%] {"bg-[#2b2c2f] px-5 py-3 rounded-[24px]" if is_user else "py-2"}'):
-                ui.markdown(base_response).classes('text-[16px] leading-relaxed text-gray-200')
+            msg_box_classes = 'max-w-[85%] px-0 py-0 '
+            if is_user:
+                msg_box_classes = 'max-w-[85%] px-5 py-3 rounded-[24px] bg-[#2b2c2f] text-gray-200'
+            
+            with ui.element('div').classes(msg_box_classes):
+                ui.markdown(base_response).classes('text-[16px] leading-relaxed break-words text-gray-200')
                 if metadata and not is_user:
-                    ui.label(metadata.replace('*', '')).classes('text-[11px] text-gray-500 mt-2 uppercase tracking-widest font-medium')
+                    ui.label(metadata.replace('*', '')).classes('text-[11px] text-gray-500 mt-3 uppercase tracking-widest font-semibold')
+
 
 async def send_message(e=None) -> None:
     """Обрабатывает отправку сообщения."""
@@ -82,12 +92,13 @@ async def send_message(e=None) -> None:
     app_state._save_chat_to_disk()
     
     render_messages.refresh()
-    ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+    # Скроллим только область скролла
+    await ui.run_javascript('const scroller = document.querySelector(".flex-1.overflow-y-auto"); if(scroller) scroller.scrollTo(0, scroller.scrollHeight);')
     
     loading_container.clear()
     with loading_container:
-        with ui.row().classes('w-full gap-4 justify-start items-center'):
-            ui.icon('auto_awesome', size='24px').classes('text-indigo-400')
+        with ui.element('div').classes('w-full flex gap-5 justify-start items-center no-wrap'):
+            ui.icon('auto_awesome', size='24px').classes('text-indigo-400 shrink-0')
             ui.spinner(size='sm', type='dots', color='indigo-400')
 
     try:
@@ -103,13 +114,13 @@ async def send_message(e=None) -> None:
         app_state.messages.append({"role": "assistant", "content": full_response})
         app_state._save_chat_to_disk()
 
-    except Exception as e:
-        app_state.messages.append({"role": "assistant", "content": f"Ошибка: {str(e)}"})
+    except Exception as ex:
+        app_state.messages.append({"role": "assistant", "content": f"Ошибка: {str(ex)}"})
         
     finally:
         loading_container.clear()
         render_messages.refresh()
-        ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+        await ui.run_javascript('const scroller = document.querySelector(".flex-1.overflow-y-auto"); if(scroller) scroller.scrollTo(0, scroller.scrollHeight);')
         
         from .layout import render_sidebar
         render_sidebar.refresh()

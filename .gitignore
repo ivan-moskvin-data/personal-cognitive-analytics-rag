@@ -40,6 +40,8 @@ data/memory/gold/*.md
 data/memory/*.md
 !data/memory/gold/.gitkeep
 
+src/data/
+
 # ChromaDB Vector Database
 data/vector_db/
 !data/vector_db/.gitkeep

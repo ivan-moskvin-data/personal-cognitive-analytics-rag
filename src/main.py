@@ -17,31 +17,31 @@ ui.add_head_html('''
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
     
-    :root {
-        --bg-deep: #0e0e10;        /* Почти черный как в Gemini */
-        --bg-sidebar: #171719; 
-        --accent: #4e46e5;
+    html, body { 
+        margin: 0; padding: 0; 
+        height: 100vh; width: 100vw; 
+        overflow: hidden !important; 
+    }
+    
+    .nicegui-content { padding: 0 !important; margin: 0 !important; }
+    .q-layout, .q-page-container, .q-page { padding: 0 !important; min-height: 100vh !important; }
+    
+    .q-layout, .q-page-container, .q-page { 
+        padding: 0 !important; 
+        min-height: 100vh !important; 
     }
 
     body {
-        background-color: var(--bg-deep);
+        background-color: #0e0e10;
         font-family: 'Inter', sans-serif;
         color: #e3e3e3;
     }
 
-    .q-page { padding: 0 !important; min-height: 100vh !important; }
-    .q-layout-padding { padding: 0 !important; }
-
-    /* Убираем все стандартные тени и границы */
-    .q-btn, .q-card {
-        box-shadow: none !important;
-        border: none !important;
-    }
-
-    /* Стилизация скроллбара */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    /* Кастомный скроллбар для внутренних блоков */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
 </style>
 ''', shared=True)
 
