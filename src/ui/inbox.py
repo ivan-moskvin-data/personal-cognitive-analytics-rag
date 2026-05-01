@@ -14,7 +14,7 @@ def render_inbox() -> None:
         # Header
         with ui.row().classes('w-full items-center justify-between'):
             ui.label('📥 Входящие знания').classes('text-3xl font-bold text-white')
-            ui.caption('Факты, выделенные из общения. Нажми «Принять», чтобы сохранить их навсегда.').classes('text-gray-400')
+            ui.label('Факты, выделенные из общения. Нажми «Принять», чтобы сохранить их навсегда.').classes('text-gray-400')
         
         patches = list(INBOX_PATH.glob("*.md"))
         

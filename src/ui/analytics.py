@@ -13,7 +13,7 @@ def render_dashboard() -> None:
         # Header
         with ui.row().classes('w-full items-center justify-between'):
             ui.label('📊 Аналитика чат-логов').classes('text-3xl font-bold text-white')
-            ui.caption('Визуализация исторических данных из cleaned_logs.parquet').classes('text-gray-400')
+            ui.label('Визуализация исторических данных из cleaned_logs.parquet').classes('text-gray-400')
         
         df = load_data()
         if df is None:
@@ -78,7 +78,7 @@ def render_telemetry() -> None:
         # Header
         with ui.row().classes('w-full items-center justify-between'):
             ui.label('📈 Мониторинг здоровья PCAR').classes('text-3xl font-bold text-white')
-            ui.caption('Анализ производительности: Оркестратор, Роутер, Кэш и LLM').classes('text-gray-400')
+            ui.label('Анализ производительности: Оркестратор, Роутер, Кэш и LLM').classes('text-gray-400')
         
         db_path = Path(__file__).resolve().parent.parent.parent / "data" / "vector_db" / "telemetry.db"
         

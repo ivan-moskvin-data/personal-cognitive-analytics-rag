@@ -69,16 +69,21 @@ def render_sidebar() -> None:
             ('chat', 'Чат', 'chat_bubble_outline'),
             ('inbox', 'Входящие', 'inventory_2'),
             ('logs', 'Логи', 'analytics'),
-            ('telemetry', 'Телеметрия', 'monitoring'),
+            ('telemetry', 'Телеметрия', 'insights'),
         ]
         for mode, label, item_icon in nav_items:
             is_active = current_mode["view"] == mode
-            
+             
+            def make_click_handler(m):
+                """Функция-фабрика для создания обработчика клика с замыканием m."""
+                def handler():
+                    set_mode(m)
+                return handler
+             
             with ui.row().classes(f'w-full h-11 px-4 rounded-full cursor-pointer transition-colors '
                                   f'{"bg-[#282a2c] text-white" if is_active else "bg-transparent text-gray-400 hover:bg-[#202123] hover:text-gray-200"}') \
                                   .style('display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: center;') \
-                                  .on('click', lambda m=mode: set_mode(m)):
-            
+                                  .on('click', make_click_handler(mode)):
                 ui.icon(item_icon, size='20px').classes('justify-self-center')
                 ui.label(label).classes('text-[14px] font-medium truncate')
 
@@ -87,8 +92,9 @@ def render_sidebar() -> None:
     
     with ui.element('div').classes('flex-1 w-full overflow-y-auto custom-scrollbar pr-2'):
         with ui.column().classes('w-full gap-1 no-wrap'):
-            all_chat_ids = list(app_state.chats_meta.keys())
-            for chat_id in reversed(all_chat_ids):
+            # Сортировка чатов: pinned first, затем по timestamp последнего сообщения
+            sorted_chat_ids = app_state.get_sorted_chats()
+            for chat_id in sorted_chat_ids:
                 chat_data = app_state.chats_meta.get(chat_id, {})
                 title = chat_data.get("title", "Без названия")
                 is_current = (chat_id == app_state.current_chat_id) and (current_mode["view"] == "chat")

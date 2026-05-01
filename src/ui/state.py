@@ -8,7 +8,7 @@ from hitl.auto_sync import AutoSync
 import uuid
 
 
-HISTORY_DIR = Path(__file__).resolve().parent.parent / "data" / "history"
+HISTORY_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "history"
 METADATA_FILE = HISTORY_DIR / "metadata.json"
 
 # Убедимся, что директория для истории существует
@@ -98,13 +98,21 @@ class AppState:
         return []
 
     def _save_chat_to_disk(self, chat_id: Optional[str] = None) -> None:
-        """Сохраняет текущую сессию чата в файл."""
+        """Сохраняет текущую сессию чата в файл и обновляет timestamp последнего сообщения."""
         if chat_id is None:
             chat_id = self.current_chat_id
         if chat_id:
             chat_file = HISTORY_DIR / f"{chat_id}.json"
             with open(chat_file, "w", encoding="utf-8") as f:
                 json.dump(self.messages, f, ensure_ascii=False, indent=2)
+            
+            # Обновляем timestamp последнего сообщения в метаданных
+            if chat_id in self.chats_meta:
+                from datetime import datetime, timezone
+                last_msg = self.messages[-1] if self.messages else None
+                if last_msg:
+                    self.chats_meta[chat_id]["last_message_timestamp"] = datetime.now(timezone.utc).isoformat()
+                    self._save_metadata()
 
     def create_new_chat(self) -> None:
         """Создает новый чат и переключается на него."""
@@ -155,6 +163,36 @@ class AppState:
     def delete_patch(self, patch_file: Path) -> None:
         """Удаляет файл патча."""
         patch_file.unlink()
+
+    def get_sorted_chats(self) -> List[str]:
+        """Возвращает список чатов, отсортированных по pinned и timestamp последнего сообщения."""
+        from datetime import datetime, timezone
+        
+        pinned = []
+        unpinned = []
+        
+        for chat_id, meta in self.chats_meta.items():
+            timestamp = meta.get("last_message_timestamp")
+            if timestamp:
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                except Exception:
+                    dt = datetime.min.replace(tzinfo=timezone.utc)
+            else:
+                dt = datetime.min.replace(tzinfo=timezone.utc)
+            
+            entry = (chat_id, dt)
+            if chat_id in self.pinned_chat_ids:
+                pinned.append(entry)
+            else:
+                unpinned.append(entry)
+        
+        # Сортировка по timestamp (новые первыми)
+        pinned.sort(key=lambda x: x[1], reverse=True)
+        unpinned.sort(key=lambda x: x[1], reverse=True)
+        
+        # Pinned чаты идут первыми, затем unpinned
+        return [chat_id for chat_id, _ in pinned] + [chat_id for chat_id, _ in unpinned]
 
 
 # Глобальный экземпляр для удобства
