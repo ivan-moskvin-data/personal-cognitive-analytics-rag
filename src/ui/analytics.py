@@ -140,11 +140,32 @@ def render_telemetry() -> None:
 
 def load_data() -> Optional[pd.DataFrame]:
     """Ленивая загрузка и кэширование исторических логов из Parquet."""
-    file_path = Path(__file__).resolve().parent.parent.parent / "data" / "processed" / "cleaned_logs.parquet"
-    if file_path.exists():
-        try:
-            df = pd.read_parquet(file_path)
-            return df if not df.empty else None
-        except Exception:
-            pass
+    import os
+    # Используем parent.parent.parent для достижения корня проекта
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    file_path = base_dir / "data" / "processed" / "cleaned_logs.parquet"
+    
+    # Логирование в файл для отладки
+    log_dir = base_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "analytics_debug.log"
+    
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"[DEBUG] load_data: cwd = {os.getcwd()}\n")
+        f.write(f"[DEBUG] load_data: base_dir = {base_dir}\n")
+        f.write(f"[DEBUG] load_data: file_path = {file_path}\n")
+        f.write(f"[DEBUG] load_data: file_path.resolve() = {file_path.resolve()}\n")
+        f.write(f"[DEBUG] load_data: exists = {file_path.exists()}\n")
+        if file_path.exists():
+            f.write(f"[DEBUG] load_data: file_size = {file_path.stat().st_size} bytes\n")
+            processed_dir = file_path.parent
+            f.write(f"[DEBUG] load_data: files in {processed_dir} = {list(processed_dir.glob('*'))}\n")
+            try:
+                df = pd.read_parquet(file_path)
+                f.write(f"[DEBUG] load_data: df.shape = {df.shape}\n")
+                return df if not df.empty else None
+            except Exception as e:
+                f.write(f"[DEBUG] load_data: read_parquet error = {e}\n")
+                return None
+        f.write(f"[DEBUG] load_data: file not found\n")
     return None
