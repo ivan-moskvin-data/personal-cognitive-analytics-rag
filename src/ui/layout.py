@@ -1,19 +1,19 @@
 """Навигация и сайдбар интерфейса PCAR (Grid System)."""
 import nicegui.ui as ui
 from .state import app_state
+from ..memory.training import mount_training_page
 
 current_mode = {"view": "chat"}
 
 def render_layout() -> None:
     """Отрисовывает основной макет интерфейса."""
-    # Главный контейнер на весь экран. Запрещаем скролл.
     with ui.row().classes('w-full h-screen bg-[#0e0e10] p-0 m-0 no-wrap items-stretch overflow-hidden'):
         
         # САЙДБАР
         with ui.column().classes('w-[280px] h-full bg-[#171719] p-4 gap-0 shrink-0 border-r border-white/5 no-wrap'):
             render_sidebar()
         
-        # КОНТЕНТ (занимает все свободное место, overflow-hidden чтобы не плодить скроллы)
+        # КОНТЕНТ
         with ui.column().classes('flex-1 h-full p-0 m-0 relative overflow-hidden'):
             render_content_area()
 
@@ -37,6 +37,8 @@ def render_content_area() -> None:
                 elif current_mode["view"] == "inbox":
                     from .inbox import render_inbox
                     render_inbox()
+                elif current_mode["view"] == "training":
+                    mount_training_page()
 
 @ui.refreshable
 def render_sidebar() -> None:
@@ -70,6 +72,7 @@ def render_sidebar() -> None:
             ('inbox', 'Входящие', 'inventory_2'),
             ('logs', 'Логи', 'analytics'),
             ('telemetry', 'Телеметрия', 'insights'),
+            ('training', 'Тренировка', 'school'),
         ]
         for mode, label, item_icon in nav_items:
             is_active = current_mode["view"] == mode
