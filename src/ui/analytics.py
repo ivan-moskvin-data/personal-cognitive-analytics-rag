@@ -74,6 +74,8 @@ def render_dashboard() -> None:
 
 def render_telemetry() -> None:
     """Отрисовывает дашборд производительности RAG."""
+    from memory.srs_db import SRSDatabase
+    
     with ui.column().classes('gap-6 w-full max-w-7xl mx-auto'):
         # Header
         with ui.row().classes('w-full items-center justify-between'):
@@ -115,6 +117,31 @@ def render_telemetry() -> None:
                         ui.icon(icon, size='32px').classes(f'text-{color}-500 mb-3')
                         ui.label(title).classes('text-sm text-gray-400')
                         ui.label(value).classes('text-3xl font-bold text-white mt-1')
+            
+            ui.separator().classes('border-slate-800 my-2')
+            
+            # Метрики тренировок
+            db = SRSDatabase()
+            stats = db.get_stats()
+            
+            with ui.row().classes('w-full gap-3'):
+                # Виджет 1: Объем базы
+                with ui.column().classes('flex-1 bg-[#1e1f20] rounded-2xl p-4 border border-white/5 items-center justify-center'):
+                    ui.icon('inventory_2', size='24px').classes('text-blue-400 mb-1')
+                    ui.label(str(stats["total"])).classes('text-2xl font-bold text-white')
+                    ui.label('Всего фактов').classes('text-[11px] text-gray-500 uppercase tracking-wider')
+
+                # Виджет 2: Долгосрочная память
+                with ui.column().classes('flex-1 bg-[#1e1f20] rounded-2xl p-4 border border-white/5 items-center justify-center'):
+                    ui.icon('emoji_events', size='24px').classes('text-yellow-400 mb-1')
+                    ui.label(str(stats["long_term"])).classes('text-2xl font-bold text-white')
+                    ui.label('В долгосрочной').classes('text-[11px] text-gray-500 uppercase tracking-wider')
+
+                # Виджет 3: Качество обучения (Avg Ease Factor)
+                with ui.column().classes('flex-1 bg-[#1e1f20] rounded-2xl p-4 border border-white/5 items-center justify-center'):
+                    ui.icon('psychology', size='24px').classes('text-green-400 mb-1')
+                    ui.label(str(stats["avg_ease"])).classes('text-2xl font-bold text-white')
+                    ui.label('Средняя легкость').classes('text-[11px] text-gray-500 uppercase tracking-wider')
             
             ui.separator().classes('border-slate-800 my-2')
             

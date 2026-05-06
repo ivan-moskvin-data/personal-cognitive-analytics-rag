@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from typing import Protocol, TypedDict
 
 # Настраиваем логгер для модуля. На уровне приложения он должен быть сконфигурирован для вывода в JSON.
@@ -60,7 +61,8 @@ class SRSEvaluator:
 
         response_text = ""
         try:
-            response_text = await self.bot.get_llm_response(prompt)
+            await asyncio.to_thread(self.bot.process_query, query=prompt)
+            response_text = self.bot.last_answer
             json_str = self._extract_json_from_text(response_text)
             
             result = json.loads(json_str)

@@ -1,7 +1,7 @@
 """Навигация и сайдбар интерфейса PCAR (Grid System)."""
 import nicegui.ui as ui
 from .state import app_state
-from ..memory.training import mount_training_page
+from memory.training import mount_training_page
 
 current_mode = {"view": "chat"}
 
@@ -38,7 +38,7 @@ def render_content_area() -> None:
                     from .inbox import render_inbox
                     render_inbox()
                 elif current_mode["view"] == "training":
-                    mount_training_page()
+                    mount_training_page(app_state.bot)
 
 @ui.refreshable
 def render_sidebar() -> None:

@@ -117,3 +117,26 @@ class SRSDatabase:
             # Возвращаем обновленный стейт
             cursor = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,))
             return dict(cursor.fetchone()) # type: ignore
+    
+    def get_stats(self) -> dict:
+        """Возвращает базовую статистику по карточкам для дашборда."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # 1. Всего карточек
+            cursor.execute("SELECT COUNT(*) FROM cards")
+            total_cards = cursor.fetchone()[0] or 0
+            
+            # 2. Карточек в долгосрочной памяти (интервал >= 21 дня)
+            cursor.execute("SELECT COUNT(*) FROM cards WHERE interval >= 21")
+            long_term = cursor.fetchone()[0] or 0
+            
+            # 3. Средний Ease Factor
+            cursor.execute("SELECT AVG(ease_factor) FROM cards")
+            avg_ef = cursor.fetchone()[0] or 2.5
+            
+            return {
+                "total": total_cards,
+                "long_term": long_term,
+                "avg_ease": round(avg_ef, 2)
+            }
