@@ -92,7 +92,7 @@ def track_usage(event_name: str) -> Callable:
             # Универсальное извлечение контекста: защита от использования декоратора НЕ в классах
             # Если первый аргумент (args[0]) это экземпляр класса (self), пытаемся достать атрибуты
             instance = args[0] if args and hasattr(args[0], '__dict__') else None
-            intent = getattr(instance, 'current_query', 'unknown') if instance else 'unknown'
+            intent = getattr(instance, 'current_intent', 'unknown') if instance else 'unknown'
             cache_hit = getattr(instance, 'is_cache_hit', False) if instance else False
 
             try:

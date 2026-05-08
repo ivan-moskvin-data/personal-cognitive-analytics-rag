@@ -140,3 +140,10 @@ class SRSDatabase:
                 "long_term": long_term,
                 "avg_ease": round(avg_ef, 2)
             }
+    
+    def delete_card(self, card_id: int) -> None:
+        """Удаляет карточку из базы данных по её ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM cards WHERE id = ?", (card_id,))
+            conn.commit()

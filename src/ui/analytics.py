@@ -149,15 +149,21 @@ def render_telemetry() -> None:
             with ui.row().classes('w-full gap-4'):
                 with ui.card().classes('flex-1 bg-slate-800/80 rounded-xl p-6 shadow-lg border border-slate-700/50'):
                     ui.label('Популярные Интенты').classes('text-lg font-semibold text-gray-200 mb-4')
-                    fig_intent = px.pie(df, names='intent', hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu)
+                    
+                    df['clean_intent'] = df['intent'].apply(lambda x: x[:30] + '...' if len(str(x)) > 30 else x)
+                    
+                    fig_intent = px.pie(df, names='clean_intent', hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu)
                     fig_intent.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
                     ui.plotly(fig_intent).classes('w-full')
                 
                 with ui.card().classes('flex-1 bg-slate-800/80 rounded-xl p-6 shadow-lg border border-slate-700/50'):
                     ui.label('Скорость: Кэш vs LLM').classes('text-lg font-semibold text-gray-200 mb-4')
-                    fig_lat = px.box(df, x='cache_hit', y='latency_ms',
-                                    points="all", labels={'cache_hit': 'Из кэша (1=Да)', 'latency_ms': 'мс'})
-                    fig_lat.update_traces(marker=dict(color=['#ef4444', '#22c55e']))
+                    
+                    df['Источник'] = df['cache_hit'].map({1: 'Семантический Кэш', 0: 'LLM'})
+                    
+                    fig_lat = px.box(df, x='Источник', y='latency_ms', color='Источник', points="all", 
+                                     labels={'latency_ms': 'Задержка (мс)'},
+                                     color_discrete_map={'Семантический Кэш': '#22c55e', 'LLM': '#ef4444'})
                     fig_lat.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
                     ui.plotly(fig_lat).classes('w-full')
         

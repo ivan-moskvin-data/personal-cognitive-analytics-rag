@@ -61,8 +61,7 @@ class SRSEvaluator:
 
         response_text = ""
         try:
-            await asyncio.to_thread(self.bot.process_query, query=prompt)
-            response_text = self.bot.last_answer
+            response_text = await self.bot.get_llm_response(prompt)
             json_str = self._extract_json_from_text(response_text)
             
             result = json.loads(json_str)

@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import requests
+import asyncio
 import numpy as np
 from typing import List, Set, Optional, Dict, Any
 from transitions import Machine, EventData
@@ -220,6 +221,23 @@ class PCARBrain:
             print("\n❌ Ошибка обработки ответа от сервера.\n")
         finally:
             self.reset()
+    
+    async def get_llm_response(self, prompt: str) -> str:
+        """
+        Прямой вызов LLM в обход кэша, RAG и роутера.
+        Используется исключительно для внутренних (фоновых) задач агента.
+        """
+        def _request():
+            payload = {
+                "model": "deepseek/deepseek-v4-flash",
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            # Увеличенный таймаут для больших генераций
+            res = self._session.post(self.OPENROUTER_URL, json=payload, timeout=120)
+            res.raise_for_status()
+            return res.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+            
+        return await asyncio.to_thread(_request)
 
 if __name__ == "__main__":
     try:

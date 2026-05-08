@@ -50,6 +50,14 @@ class AnkiTrainerUI:
         self.current_card = due_cards[0]
         self._render_card_screen(len(due_cards))
 
+    def delete_current_card(self) -> None:
+        """Удаляет текущую карточку и переходит к следующей."""
+        if self.current_card:
+            self.db.delete_card(self.current_card["id"])
+            ui.notify("Карточка удалена навсегда", type="warning", icon="delete")
+            self.current_card = None
+            self.render_review_panel.refresh()
+
     def _render_success_screen(self) -> None:
         with ui.column().classes('items-center gap-4 mt-32'):
             ui.icon('task_alt', size='64px').classes('text-green-500 mb-4')
@@ -61,7 +69,12 @@ class AnkiTrainerUI:
             return
 
         with ui.element('div').classes('w-full max-w-2xl bg-[#1e1f20] rounded-[24px] p-8 shadow-2xl border border-white/5 flex flex-col gap-6 relative mt-8'):
-            ui.label(f'Осталось карточек: {cards_left}').classes('absolute top-4 right-6 text-[12px] text-gray-500 font-semibold tracking-widest uppercase')
+            # Блок с счетчиком и кнопкой удаления в правом верхнем углу
+            with ui.row().classes('absolute top-4 right-6 items-center gap-4'):
+                ui.label(f'Осталось карточек: {cards_left}').classes('text-[12px] text-gray-500 font-semibold tracking-widest uppercase')
+                ui.button(icon='delete', on_click=self.delete_current_card) \
+                    .props('flat round size=sm') \
+                    .classes('text-gray-500 hover:text-red-400 transition-colors')
             
             ui.label('ВОПРОС').classes('text-[12px] text-indigo-400 font-bold tracking-widest uppercase mt-4')
             ui.markdown(self.current_card["question"]).classes('text-xl text-gray-200 leading-relaxed')
@@ -193,8 +206,7 @@ class AnkiTrainerUI:
                 f"МАТЕРИАЛ:\n{text}"
             )
             
-            await asyncio.to_thread(self.evaluator.bot.process_query, query=prompt)
-            raw_response = self.evaluator.bot.last_answer
+            raw_response = await self.evaluator.bot.get_llm_response(prompt)
             
             # 1. Защита парсинга
             json_str = self._extract_json_array(raw_response)
