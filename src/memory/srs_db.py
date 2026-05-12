@@ -141,6 +141,26 @@ class SRSDatabase:
                 "avg_ease": round(avg_ef, 2)
             }
     
+    def get_learning_metrics(self) -> dict:
+        """Возвращает метрики обучения: Retention Rate и Lapsed Cards."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Retention Rate: доля карточек с interval > 1 среди repetitions > 0
+            cursor.execute("SELECT ROUND(CAST(SUM(CASE WHEN interval > 1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100, 1) FROM cards WHERE repetitions > 0")
+            retention_result = cursor.fetchone()[0]
+            retention_rate = float(retention_result) if retention_result is not None else 0.0
+            
+            # Lapsed Cards: карточки с repetitions > 2 и interval <= 1
+            cursor.execute("SELECT COUNT(*) FROM cards WHERE repetitions > 2 AND interval <= 1")
+            lapsed_result = cursor.fetchone()[0]
+            lapsed_cards = int(lapsed_result) if lapsed_result is not None else 0
+            
+            return {
+                "retention_rate": retention_rate,
+                "lapsed_cards": lapsed_cards
+            }
+
     def delete_card(self, card_id: int) -> None:
         """Удаляет карточку из базы данных по её ID."""
         with sqlite3.connect(self.db_path) as conn:

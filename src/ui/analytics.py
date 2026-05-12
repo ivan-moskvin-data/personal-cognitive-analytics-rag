@@ -6,6 +6,7 @@ import nicegui.ui as ui
 from pathlib import Path
 from typing import Optional
 from .state import HISTORY_DIR
+from memory.srs_db import SRSDatabase
 
 def render_dashboard() -> None:
     """Отрисовывает аналитический дашборд (EDA)."""
@@ -74,8 +75,6 @@ def render_dashboard() -> None:
 
 def render_telemetry() -> None:
     """Отрисовывает дашборд производительности RAG."""
-    from memory.srs_db import SRSDatabase
-    
     with ui.column().classes('gap-6 w-full max-w-7xl mx-auto'):
         # Header
         with ui.row().classes('w-full items-center justify-between'):
@@ -142,6 +141,30 @@ def render_telemetry() -> None:
                     ui.icon('psychology', size='24px').classes('text-green-400 mb-1')
                     ui.label(str(stats["avg_ease"])).classes('text-2xl font-bold text-white')
                     ui.label('Средняя легкость').classes('text-[11px] text-gray-500 uppercase tracking-wider')
+            
+            ui.separator().classes('border-slate-800 my-2')
+            
+            # Learning Metrics (Retention Rate и Lapses)
+            db = SRSDatabase(Path("data/memory/srs_cards.sqlite"))
+            metrics = db.get_learning_metrics()
+            
+            with ui.row().classes('w-full gap-4 mb-6'):
+                # Карточка 1: Усвоение (Retention Rate)
+                retention = metrics["retention_rate"]
+                retention_color = "text-green-500" if retention >= 80 else "text-red-500"
+                with ui.card().classes('flex-1 bg-slate-800 border-slate-700 rounded-xl p-6 shadow-lg'):
+                    ui.label("Усвоение (Retention)").classes('text-sm text-gray-400')
+                    ui.label(f"{retention}%").classes(f'text-2xl font-bold {retention_color} mt-1')
+                
+                # Карточка 2: Проблемные карточки (Lapses)
+                lapsed = metrics["lapsed_cards"]
+                lapsed_color = "text-red-500" if lapsed > 5 else "text-green-500"
+                lapsed_icon = "warning" if lapsed > 5 else "check_circle"
+                with ui.card().classes('flex-1 bg-slate-800 border-slate-700 rounded-xl p-6 shadow-lg'):
+                    ui.label("Проблемные карточки").classes('text-sm text-gray-400')
+                    with ui.row().classes('items-center gap-2 mt-1'):
+                        ui.icon(lapsed_icon, size='24px').classes(f'{lapsed_color}')
+                        ui.label(str(lapsed)).classes(f'text-2xl font-bold {lapsed_color}')
             
             ui.separator().classes('border-slate-800 my-2')
             
