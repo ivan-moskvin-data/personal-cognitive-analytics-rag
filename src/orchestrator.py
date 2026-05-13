@@ -72,7 +72,7 @@ class PCARBrain:
         self.collection = self.db_client.get_collection(name="pcar_gold", embedding_function=self.emb_fn)
 
         # Подключаем наши модули (Роутер и Кэш)
-        self.semantic_router = SemanticRouter()
+        self.semantic_router = SemanticRouter(emb_fn=self.emb_fn)
         self.cache = SemanticCache()
         self.ewa = EWAFilter(top_k=7)
         self.patch_gen = PatchGenerator()

@@ -34,9 +34,9 @@ class SemanticRouter:
 
     CONFIDENCE_THRESHOLD: float = 0.3
 
-    def __init__(self) -> None:
+    def __init__(self, emb_fn: Optional[any] = None) -> None:
         logging.info("Инициализация нейро-роутера и предрасчет матриц...")
-        self.emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+        self.emb_fn = emb_fn or embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="all-MiniLM-L6-v2"
         )
         
