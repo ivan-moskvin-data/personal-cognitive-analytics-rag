@@ -126,8 +126,8 @@ class PCARBrain:
         query_emb = np.array(self.emb_fn([self.current_query])[0])
         self.current_query_emb = query_emb # Сохраняем вектор в память агента
         
-        # 2. Ищем похожий вектор в базе SQLite
-        cached_response = self.cache.get(query_emb)
+        # 2. Ищем точное совпадение в базе SQLite
+        cached_response = self.cache.check_cache(self.current_query)
         
         if cached_response:
             print("[CACHE] ⚡ Найден точный ответ! Отдаю из локальной памяти.")
@@ -203,7 +203,7 @@ class PCARBrain:
             # СОХРАНЕНИЕ В КЭШ: Запоминаем сгенерированный ответ на будущее
             if self.current_query_emb is not None:
                 # В кэш сохраняем только clean_answer (без патч-блоков)
-                self.cache.set(self.current_query, self.current_query_emb, clean_answer)
+                self.cache.add_to_cache(self.current_query, clean_answer)
             
             # Формируем финальный ответ с уведомлением о патчах
             if patches:
