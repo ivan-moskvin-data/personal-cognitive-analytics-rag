@@ -179,16 +179,29 @@ def render_telemetry() -> None:
                     fig_intent.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
                     ui.plotly(fig_intent).classes('w-full')
                 
+                # График 2: Задержка по интентам (Скорость LLM)
                 with ui.card().classes('flex-1 bg-slate-800/80 rounded-xl p-6 shadow-lg border border-slate-700/50'):
-                    ui.label('Скорость: Кэш vs LLM').classes('text-lg font-semibold text-gray-200 mb-4')
+                    ui.label('Время ответа (по типам задач)').classes('text-lg font-semibold text-gray-200 mb-4')
                     
-                    df['Источник'] = df['cache_hit'].map({1: 'Семантический Кэш', 0: 'LLM'})
+                    # Берем статистику ТОЛЬКО по реальным запросам к нейросети (без кэша)
+                    df_llm = df[df['cache_hit'] == 0].copy()
                     
-                    fig_lat = px.box(df, x='Источник', y='latency_ms', color='Источник', points="all", 
-                                     labels={'latency_ms': 'Задержка (мс)'},
-                                     color_discrete_map={'Семантический Кэш': '#22c55e', 'LLM': '#ef4444'})
-                    fig_lat.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
-                    ui.plotly(fig_lat).classes('w-full')
+                    if not df_llm.empty:
+                        # Рисуем ящики с усами для каждого интента
+                        fig_lat = px.box(df_llm, x='intent', y='latency_ms', color='intent', points="all", 
+                                         labels={'latency_ms': 'Задержка (мс)', 'intent': 'Тип запроса'},
+                                         color_discrete_sequence=px.colors.qualitative.Pastel)
+                        
+                        fig_lat.update_layout(
+                            paper_bgcolor='rgba(0,0,0,0)', 
+                            plot_bgcolor='rgba(0,0,0,0)', 
+                            font=dict(color='white'),
+                            showlegend=False,
+                            xaxis={'categoryorder':'total descending'} # Сортируем от самых частых
+                        )
+                        ui.plotly(fig_lat).classes('w-full')
+                    else:
+                        ui.label('Пока нет данных от нейросети').classes('text-gray-400 text-center mt-10 w-full')
         
         except Exception as e:
             with ui.card().classes('bg-slate-800/50 border border-red-600/30 p-6 rounded-xl'):

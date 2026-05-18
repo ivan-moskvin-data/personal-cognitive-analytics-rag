@@ -8,6 +8,7 @@ from .state import app_state
 
 INBOX_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "inbox"
 
+@ui.refreshable
 def render_inbox() -> None:
     """Отрисовывает интерфейс входящих патчей."""
     with ui.column().classes('gap-6 w-full max-w-5xl mx-auto'):
@@ -80,11 +81,11 @@ async def handle_accept_patch(patch_file: Path) -> None:
     app_state.apply_patch(patch_file)
     ui.notify("Патч успешно применен", type="positive", color='green')
     await asyncio.sleep(0.5)
-    ui.refresh()
+    render_inbox.refresh()
 
 async def handle_delete_patch(patch_file: Path) -> None:
     """Обрабатывает удаление патча."""
     app_state.delete_patch(patch_file)
     ui.notify("Патч удален", type="warning", color='yellow')
     await asyncio.sleep(0.5)
-    ui.refresh()
+    render_inbox.refresh()
