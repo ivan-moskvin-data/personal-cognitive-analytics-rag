@@ -142,24 +142,36 @@ class SRSDatabase:
             }
     
     def get_learning_metrics(self) -> dict:
-        """Возвращает метрики обучения: Retention Rate и Lapsed Cards."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Retention Rate: доля карточек с interval > 1 среди repetitions > 0
-            cursor.execute("SELECT ROUND(CAST(SUM(CASE WHEN interval > 1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100, 1) FROM cards WHERE repetitions > 0")
-            retention_result = cursor.fetchone()[0]
-            retention_rate = float(retention_result) if retention_result is not None else 0.0
-            
-            # Lapsed Cards: карточки с repetitions > 2 и interval <= 1
-            cursor.execute("SELECT COUNT(*) FROM cards WHERE repetitions > 2 AND interval <= 1")
-            lapsed_result = cursor.fetchone()[0]
-            lapsed_cards = int(lapsed_result) if lapsed_result is not None else 0
-            
-            return {
-                "retention_rate": retention_rate,
-                "lapsed_cards": lapsed_cards
-            }
+        """Возвращает метрики качества обучения (Retention и Lapses)."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT ROUND(
+                        CAST(SUM(CASE WHEN repetitions > 0 THEN 1 ELSE 0 END) AS FLOAT) 
+                        / NULLIF(COUNT(*), 0) * 100, 
+                    1)
+                    FROM cards 
+                    WHERE interval > 0 OR repetitions > 0
+                """)
+                retention_row = cursor.fetchone()
+                retention_rate = retention_row[0] if retention_row and retention_row[0] is not None else 0.0
+
+                cursor.execute("""
+                    SELECT COUNT(*)
+                    FROM cards 
+                    WHERE repetitions = 0 AND ease_factor < 2.5
+                """)
+                lapsed_row = cursor.fetchone()
+                lapsed_cards = lapsed_row[0] if lapsed_row else 0
+                
+                return {
+                    "retention_rate": retention_rate,
+                    "lapsed_cards": lapsed_cards
+                }
+        except Exception as e:
+            return {"retention_rate": 0.0, "lapsed_cards": 0}
 
     def delete_card(self, card_id: int) -> None:
         """Удаляет карточку из базы данных по её ID."""
