@@ -144,7 +144,7 @@ def render_telemetry() -> None:
             
             ui.separator().classes('border-slate-800 my-2')
             
-            # Learning Metrics (Retention Rate и Lapses)
+            # Learning Metrics (Retention Rate, Lapses и Active Days)
             db = SRSDatabase(Path("data/memory/srs_cards.sqlite"))
             metrics = db.get_learning_metrics()
             
@@ -165,6 +165,26 @@ def render_telemetry() -> None:
                     with ui.row().classes('items-center gap-2 mt-1'):
                         ui.icon(lapsed_icon, size='24px').classes(f'{lapsed_color}')
                         ui.label(str(lapsed)).classes(f'text-2xl font-bold {lapsed_color}')
+                
+                # Карточка 3: Частота сессий Active Recall (за 7 дней)
+                active_days = metrics.get("active_days", 0)
+                if active_days >= 3:
+                    active_color = "text-green-400"
+                    has_streak = True
+                elif active_days > 0:
+                    active_color = "text-yellow-400"
+                    has_streak = False
+                else:
+                    active_color = "text-red-400"
+                    has_streak = False
+                
+                with ui.card().classes('flex-1 bg-slate-800 border-slate-700 rounded-xl p-6 shadow-lg'):
+                    ui.label("Тренировки (за 7 дней)").classes('text-sm text-gray-400')
+                    with ui.row().classes('items-center gap-2 mt-1'):
+                        ui.label(f"{active_days} дн.").classes(f'text-2xl font-bold {active_color}')
+                        if has_streak:
+                            ui.icon('local_fire_department', color='orange', size='sm')
+                    ui.label("Цель: 3-5").classes('text-xs text-gray-400')
             
             ui.separator().classes('border-slate-800 my-2')
             
@@ -197,7 +217,7 @@ def render_telemetry() -> None:
                             plot_bgcolor='rgba(0,0,0,0)', 
                             font=dict(color='white'),
                             showlegend=False,
-                            xaxis={'categoryorder':'total descending'} # Сортируем от самых частых
+                            xaxis={'categoryorder':'total descending'}
                         )
                         ui.plotly(fig_lat).classes('w-full')
                     else:

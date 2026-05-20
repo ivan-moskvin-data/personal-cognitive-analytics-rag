@@ -166,12 +166,23 @@ class SRSDatabase:
                 lapsed_row = cursor.fetchone()
                 lapsed_cards = lapsed_row[0] if lapsed_row else 0
                 
+                # Новая метрика: количество уникальных дней тренировок за последние 7 дней
+                cursor.execute("""
+                    SELECT COUNT(DISTINCT date(last_reviewed))
+                    FROM cards 
+                    WHERE last_reviewed IS NOT NULL 
+                    AND last_reviewed >= datetime('now', '-7 days')
+                """)
+                active_days_row = cursor.fetchone()
+                active_days = active_days_row[0] if active_days_row else 0
+                
                 return {
                     "retention_rate": retention_rate,
-                    "lapsed_cards": lapsed_cards
+                    "lapsed_cards": lapsed_cards,
+                    "active_days": active_days
                 }
         except Exception as e:
-            return {"retention_rate": 0.0, "lapsed_cards": 0}
+            return {"retention_rate": 0.0, "lapsed_cards": 0, "active_days": 0}
 
     def delete_card(self, card_id: int) -> None:
         """Удаляет карточку из базы данных по её ID."""
