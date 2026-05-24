@@ -32,10 +32,11 @@ def render_chat() -> None:
                 
                 ui.icon('add_circle_outline', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mr-2')
 
-                input_field = ui.input(placeholder='Введите запрос...') \
-                    .props('borderless dark dense autofocus') \
-                    .classes('flex-1 text-lg text-gray-200 py-2') \
-                    .on('keydown.enter', send_message)
+                input_field = ui.textarea(placeholder='Введите запрос...') \
+                    .props('borderless dark dense autofocus autogrow') \
+                    .classes('flex-1 text-lg text-gray-200 py-2 custom-textarea') \
+                    .style('max-height: 200px; overflow-y: auto;') \
+                    .on('keydown.enter.prevent', send_message)
                 
                 ui.icon('mic_none', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mx-2')
                 
