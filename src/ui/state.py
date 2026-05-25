@@ -31,11 +31,14 @@ class AppState:
         self._initialized = True
 
         self.bot = None
-        self.current_chat_id: Optional[str] = None
+        self.current_session_id: Optional[str] = None  # Используется для динамических сессий
+        self.current_chat_id: Optional[str] = None  # Для совместимости
         self.messages: List[Dict[str, str]] = []
         self.chats_meta: Dict[str, Dict[str, Any]] = {}
         self.pinned_chat_ids: List[str] = []
         self.folders: Dict[str, List[str]] = {}
+        self.sessions: Dict[str, List[Dict[str, str]]] = {}  # Динамические сессии
+        self.session_titles: Dict[str, str] = {}  # Заголовки динамических сессий
 
         self._load_metadata()
         self._init_bot()
@@ -72,19 +75,26 @@ class AppState:
 
     def _init_chat_state(self) -> None:
         """Инициализирует состояние чата при старте."""
+        # Принудительно устанавливаем current_session_id = None для открытия "Нового чата"
+        self.current_session_id = None
+        self.current_chat_id = None
+
+        # Загружаем сохранённые чаты
         if not self.chats_meta:
-            self.current_chat_id = str(uuid.uuid4())
-            self.chats_meta[self.current_chat_id] = {"title": "Новый чат", "folderId": None}
-            self._save_metadata()
+            # Если нет сохранённых чатов — создаём первый
+            self._create_persistent_chat("Новый чат")
         else:
+            # Загружаем историю последнего чата для совместимости
             last_chat_id = list(self.chats_meta.keys())[-1]
             self.current_chat_id = last_chat_id
+            self.messages = self._load_chat_from_disk(last_chat_id)
 
-        self.messages = self._load_chat_from_disk(self.current_chat_id)
-        if not self.messages:
-            self.messages = [
-                {"role": "assistant", "content": "Привет! Я твой цифровой мозг. Все наши разговоры теперь сохраняются, даже если ты обновишь страницу!"}
-            ]
+    def _create_persistent_chat(self, title: str = "Новый чат") -> str:
+        """Создаёт постоянный чат и возвращает его ID."""
+        chat_id = str(uuid.uuid4())
+        self.chats_meta[chat_id] = {"title": title, "folderId": None}
+        self._save_metadata()
+        return chat_id
 
     def _load_chat_from_disk(self, chat_id: str) -> List[Dict[str, str]]:
         """Загружает историю чата из файла."""
@@ -114,13 +124,32 @@ class AppState:
                     self.chats_meta[chat_id]["last_message_timestamp"] = datetime.now(timezone.utc).isoformat()
                     self._save_metadata()
 
+    def _ensure_active_session(self, prompt: str) -> str:
+        """Гарантирует наличие активной сессии. Создаёт новую, если её нет."""
+        if self.current_session_id is None:
+            # Генерируем новый UUID сессии
+            session_id = str(uuid.uuid4())
+            self.current_session_id = session_id
+            
+            # Инициализируем пустой список сообщений
+            self.sessions[session_id] = []
+            
+            # Формируем базовый заголовок из первых 20 символов текста сообщения
+            title = prompt[:20] + ("..." if len(prompt) > 20 else "")
+            self.session_titles[session_id] = title
+            
+            # Также создаём постоянный чат для сохранения
+            self.current_chat_id = self._create_persistent_chat(title)
+            self.messages = []
+        
+        return self.current_session_id
+
     def create_new_chat(self) -> None:
         """Создает новый чат и переключается на него."""
         chat_id = str(uuid.uuid4())
         self.current_chat_id = chat_id
-        self.messages = [
-            {"role": "assistant", "content": "Привет! Я твой цифровой мозг. Все наши разговоры теперь сохраняются, даже если ты обновишь страницу!"}
-        ]
+        self.current_session_id = None  # Сброс динамической сессии
+        self.messages = []
         self.chats_meta[chat_id] = {"title": "Новый чат", "folderId": None}
         self._save_metadata()
         self._save_chat_to_disk(chat_id)
@@ -129,6 +158,7 @@ class AppState:
         """Переключает контекст на выбранный чат."""
         if self.current_chat_id != chat_id:
             self.current_chat_id = chat_id
+            self.current_session_id = None  # Сброс динамической сессии
             self.messages = self._load_chat_from_disk(chat_id)
 
     def auto_rename_chat(self, prompt: str) -> None:

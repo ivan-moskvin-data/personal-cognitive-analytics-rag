@@ -6,6 +6,7 @@ from .state import app_state
 input_field = None
 loading_container = None
 
+
 def render_chat() -> None:
     """Отрисовывает интерфейс чата."""
     global input_field, loading_container
@@ -17,11 +18,13 @@ def render_chat() -> None:
         with ui.element('div').classes('flex-1 w-full overflow-y-auto custom-scrollbar') as scroll_area:
             with ui.element('div').classes('w-full max-w-3xl mx-auto flex flex-col gap-8 p-4 pt-12 pb-12'):
                 
-                # Приветствие по центру если пусто
-                if not app_state.messages or len(app_state.messages) <= 0:
+                # Приветственный экран если нет активной сессии
+                if app_state.current_session_id is None:
                     with ui.column().classes('items-center w-full mt-32'):
-                        ui.label('Здравствуй!').classes('text-4xl font-medium text-gray-200 mb-2')
-                        ui.label('Чем я могу помочь?').classes('text-xl font-medium text-gray-500')
+                        # Иконка psychology с анимацией пульсации
+                        ui.icon('psychology', size='64px').classes('text-indigo-400 opacity-60 animate-pulse')
+                        ui.label('Привет! Я твой персональный цифровой мозг.').classes('text-2xl font-bold text-gray-200 mt-4 mb-2')
+                        ui.label('Задай мне любой вопрос по твоей базе знаний или загруженным материалам.').classes('text-sm text-gray-500 text-center max-w-md')
                 
                 render_messages()
                 loading_container = ui.element('div').classes('w-full flex flex-col gap-4')
@@ -50,6 +53,10 @@ def render_chat() -> None:
 @ui.refreshable
 def render_messages():
     """Перерисовывает историю сообщений."""
+    # Если нет активной сессии — не отрисовываем сообщения
+    if app_state.current_session_id is None:
+        return
+    
     for msg in app_state.messages:
         if msg["content"].startswith("Привет! Я твой цифровой мозг"):
             continue
@@ -88,6 +95,10 @@ async def send_message(e=None) -> None:
     if not prompt: return
 
     input_field.value = ''
+    
+    # Гарантируем наличие активной сессии
+    app_state._ensure_active_session(prompt)
+    
     app_state.auto_rename_chat(prompt)
     app_state.messages.append({"role": "user", "content": prompt})
     app_state._save_chat_to_disk()
@@ -125,3 +136,4 @@ async def send_message(e=None) -> None:
         
         from .layout import render_sidebar
         render_sidebar.refresh()
+
