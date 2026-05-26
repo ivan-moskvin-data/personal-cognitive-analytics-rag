@@ -35,11 +35,24 @@ def render_chat() -> None:
                 
                 ui.icon('add_circle_outline', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mr-2')
 
+                async def handle_enter(e):
+                    # Если зажат Shift или Ctrl — прерываемся, даем браузеру перенести строку
+                    if e.args.get('shiftKey') or e.args.get('ctrlKey'):
+                        return
+                    
+                    # Безопасный вызов твоей функции отправки (даже если она async)
+                    import inspect
+                    if inspect.iscoroutinefunction(send_message):
+                        await send_message()
+                    else:
+                        send_message()
+
                 input_field = ui.textarea(placeholder='Введите запрос...') \
                     .props('borderless dark dense autofocus autogrow') \
+                    .props('@keydown="if ($event.key === \'Enter\' && !$event.shiftKey && !$event.ctrlKey) $event.preventDefault()"') \
                     .classes('flex-1 text-lg text-gray-200 py-2 custom-textarea') \
                     .style('max-height: 200px; overflow-y: auto;') \
-                    .on('keydown.enter.prevent', send_message)
+                    .on('keydown.enter', handle_enter, ['shiftKey', 'ctrlKey'])
                 
                 ui.icon('mic_none', size='24px').classes('text-gray-400 cursor-pointer hover:text-white transition-colors shrink-0 mx-2')
                 
